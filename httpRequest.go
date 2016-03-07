@@ -14,14 +14,16 @@ import (
 
 var log = logging.MustGetLogger("HttpRequestLogger")
 var format = logging.MustStringFormatter(
-	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.5s} %{id:03x}%{color:reset} %{message}`,
 )
+// logging
+var backend = logging.NewLogBackend(os.Stderr, "", 0)
+var backendFormatter = logging.NewBackendFormatter(backend, format)
+var backendLeveled = logging.AddModuleLevel(backend)
+
 
 func setup() (dictionary map[int]map[string]int) {
-	// logging
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	backendLeveled := logging.AddModuleLevel(backend)
+
 	backendLeveled.SetLevel(logging.INFO, "")
 	logging.SetBackend(backendLeveled, backendFormatter)
 
@@ -68,8 +70,11 @@ func createRandTileRequest (dictionary map[int]map[string]int) (url string) {
 	log.Debugf("Level: %s",strconv.Itoa(level))
 
 	stack, slice, x, y := createRandomValuesForLevel(level, dictionary)
-	tileString := "TILE+0+%c+%c+%c+%c+%c+none+10+1"
+	//             TILE%200%20{stack}%20{level}%20{slice}%20{x}%20{y}%20none%2010%201
+	//tileString := "TILE+0+%c+%c+%c+%c+%c+none+10+1"
+	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
+	log.Infof("TileString: %s", tileString)
 	url = fmt.Sprintf("%s%s%s%s", prefix, imagePath, suffix, tileString)
 	return url
 }
@@ -93,16 +98,22 @@ func main() {
 	//log.Printf("StartTime: %q", startTime.String())
 	resp, err := http.Get(u.String())
 	endTime := time.Since(startTime)
-
+	defer resp.Body.Close()
 	log.Info("Time for request:"+endTime.String())
 
 	if err != nil {
 		fmt.Println("Error: {}", err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Print(body)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode == 200 {
+		// OK
+		fmt.Print(string(bodyBytes))
+	} else {
+		log.Errorf("Response status code: %i. The error was: %v", resp.StatusCode, err)
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+
 }
