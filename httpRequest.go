@@ -98,7 +98,8 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 	endTime := time.Since(startTime)
 
 	// request time write into globally visible array
-	requestTimes[bunchNumber][requestNumber] = endTime
+	//requestTimes[bunchNumber][requestNumber] = endTime
+	pointerToRequestTimes[bunchNumber][requestNumber] = endTime
 
 	defer resp.Body.Close()
 	log.Info("Time for request:"+endTime.String())
@@ -122,7 +123,9 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 
 func createRequestBunch(bunchNumber int) {
 	for requestNumber := 0; requestNumber < bunchSize; requestNumber++ {
-		fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
+		//go func() {
+			fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
+		//}()
 	}
 }
 
@@ -132,7 +135,9 @@ func main() {
 	setup()
 
 	for bunchNumber:=0; bunchNumber<numberOfBunches; bunchNumber++ {
-		createRequestBunch(bunchNumber)
+		//go func() {
+			createRequestBunch(bunchNumber)
+		//}()
 	}
 
 	for bunchMapKey := range requestTimes {
