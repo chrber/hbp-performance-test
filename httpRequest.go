@@ -17,7 +17,7 @@ var requestParameterDictionary map[int]map[string]int;
 const numberOfBunches = 4
 const bunchSize int = 8
 var requestTimes = [numberOfBunches][bunchSize]time.Duration{}
-var pointerToRequestTimes = &requestTimes
+
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -99,7 +99,7 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 
 	// request time write into globally visible array
 	//requestTimes[bunchNumber][requestNumber] = endTime
-	pointerToRequestTimes[bunchNumber][requestNumber] = endTime
+	requestTimes[bunchNumber][requestNumber] = endTime
 
 	defer resp.Body.Close()
 	log.Info("Time for request:"+endTime.String())
