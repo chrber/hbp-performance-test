@@ -8,16 +8,31 @@ import (
 	"time"
 	"math/rand"
 	"strconv"
+	// https://github.com/Sirupsen/logrus
 	log "github.com/Sirupsen/logrus"
 	"os"
 )
 
 // Global Variables
-var requestParameterDictionary map[int]map[string]int;
-const numberOfBunches = 4
+const (
+	AverageTimeOverBunches = 1
+	AverageTimeOverRequests = 2
+	DetailedTimesPerRequest = 3
+)
+const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
+const numberOfBunches = 10
 const bunchSize int = 8
-var requestTimes = [numberOfBunches][bunchSize]time.Duration{}
+const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 
+var requestParameterDictionary map[int]map[string]int;
+const channelBuffer = numberOfBunches * bunchSize
+type Result struct {
+	bunchNumber int
+	requestNumber int
+	requestTime time.Duration
+}
+
+var fromCreateRequestBunch = make(chan Result, channelBuffer)
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -27,7 +42,9 @@ func init() {
 	log.SetOutput(os.Stderr)
 
 	// Only log the warning severity or above.
-	log.SetLevel(log.ErrorLevel)
+	log.SetLevel(log.InfoLevel)
+	//log.SetLevel(log.ErrorLevel)
+	//log.SetLevel(log.DebugLevel)
 }
 
 func setup() {
@@ -64,7 +81,6 @@ func createRandomValuesForLevel (level int) (stack, slice, x, y int) {
 
 func createRandTileRequest () (url string) {
 	prefix := "/image/v0/api/bbic?fname="
-	imagePath := "/srv/data/HBP/BigBrain_jpeg.h5"
 	suffix := "&mode=ims&prog="
 
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -76,12 +92,13 @@ func createRandTileRequest () (url string) {
 	stack, slice, x, y := createRandomValuesForLevel(level)
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
-	log.Infof("TileString: %s", tileString)
+	log.Debugf("TileString: %s", tileString)
 	url = fmt.Sprintf("%s%s%s%s", prefix, imagePath, suffix, tileString)
+	log.Debugf("URL: %v", url)
 	return url
 }
 
-func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
+func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Result {
 	u, err := url.Parse(urlSuffix)
 	if err != nil {
 		log.Fatal(err)
@@ -99,10 +116,9 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 
 	// request time write into globally visible array
 	//requestTimes[bunchNumber][requestNumber] = endTime
-	requestTimes[bunchNumber][requestNumber] = endTime
 
 	defer resp.Body.Close()
-	log.Info("Time for request:"+endTime.String())
+	log.Debug("Time for request:"+endTime.String())
 
 	if err != nil {
 		log.Errorf("{}", err)
@@ -110,8 +126,8 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode == 200 {
 		// OK
-		log.Info("#######################################")
-		log.Infof("Request number %d: %s\n", requestNumber, string(bodyBytes))
+		log.Debug("#######################################")
+		log.Debugf("Request number %d: %s\n", requestNumber, string(bodyBytes))
 	} else {
 		log.Errorf("Response status code: %i. The error was: %v", resp.StatusCode, err)
 	}
@@ -119,57 +135,69 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	return  Result{bunchNumber, requestNumber, endTime}
 }
 
 func createRequestBunch(bunchNumber int) {
 	for requestNumber := 0; requestNumber < bunchSize; requestNumber++ {
-		//go func() {
-			fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
-		//}()
+		result := fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
+		fromCreateRequestBunch <-result
 	}
 }
 
 //var sem = make(chan int, 5)
 
 func main() {
+	requestTimes := map[int]map[int]time.Duration {}
+	log.Debugf("RequestTimes length: %v", len(requestTimes))
+
 	setup()
 
 	for bunchNumber:=0; bunchNumber<numberOfBunches; bunchNumber++ {
-		//go func() {
+		requestTimes[bunchNumber] = make(map[int]time.Duration)
+		log.Debugf("Creating bunch %v", bunchNumber)
+		go func(bunchNumber int) {
 			createRequestBunch(bunchNumber)
-		//}()
+		}(bunchNumber)
 	}
 
-	for bunchMapKey := range requestTimes {
-		bunchMap := requestTimes[bunchMapKey]
-		fmt.Printf("Bunch number %d\n", bunchMapKey)
-		for requestNumber := range bunchMap {
-			fmt.Printf("Print time for request %d: %s\n", requestNumber, bunchMap[requestNumber].String())
+	for bunchNumber:=0; bunchNumber<numberOfBunches; bunchNumber++ {
+		for requestNumber:=0; requestNumber<bunchSize; requestNumber++ {
+			result := <-fromCreateRequestBunch
+			log.Debugf("Result for bunch %v, request %v: %v", result.bunchNumber, result.requestNumber, result.requestTime)
+			requestTimes[result.bunchNumber][result.requestNumber] = result.requestTime
 		}
 	}
-	//urlSuffix := createRandTileRequest()
-	//fireTileRequest(urlSuffix)
 
-	//startTime := time.Now()
-	//time.Sleep(3*time.Second)
-	//endTime := time.Since(startTime)
-	//log.Info("Time for request:"+endTime.String())
-	//i := 0
+	average := 0*time.Millisecond
+	for outerMapKey := range requestTimes {
+		if (reportDetail > 2) {
+			log.Info("=================================================")
+			log.Info("=================================================")
+			log.Infof("Map for bunch %v: ", outerMapKey)
+		}
+		innerMap := requestTimes[outerMapKey]
+		sum := 0*time.Millisecond
+		for key := range innerMap{
+			if (reportDetail > 2) {
+				log.Infof("Request: %v RequestTime: %s", key, innerMap[key])
+			}
+			sum += innerMap[key];
+		}
 
-	//startTime := time.Now()
-	//for i < 5 {
-	//	sem <- 1
-	//	go func() {
-	//		time.Sleep(3*time.Second)
-	//		<-sem
-	//	}()
-	//	i++
-	//	fmt.Println(i)
-	//}
-	//endTime := time.Since(startTime)
-	//log.Info("Time for request:"+endTime.String())
-
-
-
-
+		average += sum / numberOfBunches
+		if (reportDetail > 2) {
+			log.Info("=========")
+		}
+		if (reportDetail > 1) {
+			log.Infof("==== Request time for bunch %v: =====: %v",outerMapKey, sum)
+		}
+		if (reportDetail > 2) {
+			log.Info("=========\n")
+		}
+	}
+	log.Infof("Number of bunches: %v", numberOfBunches)
+	log.Infof("Number of requests/bunch: %v", bunchSize)
+	log.Infof("Average request time: %v", average)
 }
