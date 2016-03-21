@@ -22,6 +22,7 @@ const (
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
 const numberOfBunches = 10
 const bunchSize int = 8
+const hostname = "hbp-image.desy.de:8888"
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 
 var requestParameterDictionary map[int]map[string]int;
@@ -104,7 +105,7 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 		log.Fatal(err)
 	}
 	u.Scheme = "http"
-	u.Host = "hbp-image.desy.de:8888"
+	u.Host = hostname
 	q := u.Query()
 	//q.Set("q", "golang")
 	u.RawQuery = q.Encode()
