@@ -19,11 +19,28 @@ const (
 	AverageTimeOverRequests = 2
 	DetailedTimesPerRequest = 3
 )
+const showRequests = false;
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
 const numberOfBunches = 10
 const bunchSize int = 8
+// DESY dCache Endpoint config
+
 const hostname = "hbp-image.desy.de:8888"
+// old data
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
+// new data
+//const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
+
+//OneData Endpoint config
+//  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
+
+//const hostname = "149.156.9.143:8888"
+//old data
+//const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
+//new data
+//const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
+
+
 
 var requestParameterDictionary map[int]map[string]int;
 const channelBuffer = numberOfBunches * bunchSize
@@ -110,6 +127,9 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 	//q.Set("q", "golang")
 	u.RawQuery = q.Encode()
 	log.Debugf("Tile request URL: %q", u.String())
+	if (showRequests) {
+		log.Infof("Tile request URL: %q", u.String())
+	}
 
 	startTime := time.Now()
 	resp, err := http.Get(u.String())
