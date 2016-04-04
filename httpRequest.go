@@ -40,7 +40,11 @@ const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 //new data
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
-
+// for fixed tile requests
+const randomTileRequests = false
+var predefinedSlice = 0
+var predefinedX = 0
+var predefinedY = 0
 
 var requestParameterDictionary map[int]map[string]int;
 const channelBuffer = numberOfBunches * bunchSize
@@ -97,6 +101,29 @@ func createRandomValuesForLevel (level int) (stack, slice, x, y int) {
 	return
 }
 
+func createDeterministicValuesForLevel (level int) (stack, slice, x, y int) {
+	stack = 0
+	slice = predefinedSlice;
+	x = predefinedX;
+	y = predefinedY;
+	if (predefinedSlice < requestParameterDictionary[level]["slice"]) {
+		predefinedSlice++
+	} else {
+		predefinedSlice = 0
+	}
+	if (predefinedX < requestParameterDictionary[level]["x"]) {
+		predefinedX++
+	} else {
+		predefinedX = 0
+	}
+	if (predefinedY < requestParameterDictionary[level]["y"]) {
+		predefinedY++
+	} else {
+		predefinedY = 0
+	}
+	return
+}
+
 func createRandTileRequest () (url string) {
 	prefix := "/image/v0/api/bbic?fname="
 	suffix := "&mode=ims&prog="
@@ -108,6 +135,22 @@ func createRandTileRequest () (url string) {
 	log.Debugf("Level: %s",strconv.Itoa(level))
 
 	stack, slice, x, y := createRandomValuesForLevel(level)
+	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
+	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
+	log.Debugf("TileString: %s", tileString)
+	url = fmt.Sprintf("%s%s%s%s", prefix, imagePath, suffix, tileString)
+	log.Debugf("URL: %v", url)
+	return url
+}
+
+func createSpecificTileRequest () (url string) {
+	prefix := "/image/v0/api/bbic?fname="
+	suffix := "&mode=ims&prog="
+
+	level := 1
+	log.Debugf("Level: %s",strconv.Itoa(level))
+
+	stack, slice, x, y := createDeterministicValuesForLevel(level)
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
 	log.Debugf("TileString: %s", tileString)
@@ -162,8 +205,17 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 
 func createRequestBunch(bunchNumber int) {
 	for requestNumber := 0; requestNumber < bunchSize; requestNumber++ {
-		result := fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
-		fromCreateRequestBunch <-result
+		var result Result;
+		if randomTileRequests {
+			result = fireTileRequest(bunchNumber, requestNumber, createRandTileRequest())
+		} else {
+			result = fireTileRequest(bunchNumber, requestNumber, createSpecificTileRequest())
+		}
+		if (result != Result{}) {
+			fromCreateRequestBunch <-result
+		} else {
+			log.Errorf("Empty result returned for bunch %d.", bunchNumber)
+		}
 	}
 }
 
