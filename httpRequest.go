@@ -11,6 +11,7 @@ import (
 	// https://github.com/Sirupsen/logrus
 	log "github.com/Sirupsen/logrus"
 	"os"
+	"strings"
 )
 
 // Global Variables
@@ -23,8 +24,11 @@ const showRequests = false;
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
 const numberOfBunches = 10
 const bunchSize int = 8
-// DESY dCache Endpoint config
 
+// Check if correct image was returned
+const checkForCorrectImage = true
+
+// DESY dCache Endpoint config
 const hostname = "hbp-image.desy.de:8888"
 // old data
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
@@ -54,7 +58,16 @@ type Result struct {
 	requestTime time.Duration
 }
 
+// Channel used for returning Result struct of each bunch
 var fromCreateRequestBunch = make(chan Result, channelBuffer)
+
+// image formats and magic numbers
+var magicTable = map[string]string{
+	"\xff\xd8\xff":      "image/jpeg",
+	"\x89PNG\r\n\x1a\n": "image/png",
+	"GIF87a":            "image/gif",
+	"GIF89a":            "image/gif",
+}
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -159,6 +172,30 @@ func createSpecificTileRequest () (url string) {
 	return url
 }
 
+// mimeFromIncipit returns the mime type of an image file from its first few
+// bytes or the empty string if the file does not look like a known file type
+func mimeFromReturnedBytes(bytes []byte) string {
+	byteStr := string(bytes)
+	for magic, mime := range magicTable {
+		if strings.HasPrefix(byteStr, magic) {
+			return mime
+		}
+	}
+
+	return ""
+}
+
+func imageReturned (bytesFromRequest []byte) (bool, string) {
+	mimeType := mimeFromReturnedBytes(bytesFromRequest)
+	log.Debugf("Returned mimetype: %s", mimeType)
+
+	if (mimeType != "") {
+		return true, mimeType;
+	} else {
+		return false, mimeType;
+	}
+}
+
 func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Result {
 	u, err := url.Parse(urlSuffix)
 	if err != nil {
@@ -192,6 +229,14 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 		// OK
 		log.Debug("#######################################")
 		log.Debugf("Request number %d: %s\n", requestNumber, string(bodyBytes))
+		if (checkForCorrectImage) {
+			didReturnImage, imageType := imageReturned(bodyBytes)
+			if (didReturnImage) {
+				log.Debugf("Correct image: %s returned for Bunch: %d Request: %d URLsuffix: %s", imageType, bunchNumber, requestNumber, urlSuffix)
+			} else {
+				log.Errorf("No image returned for Bunch: %d Request: %d URLsuffix: %s", bunchNumber, requestNumber, urlSuffix)
+			}
+		}
 	} else {
 		log.Errorf("Response status code: %i. The error was: %v", resp.StatusCode, err)
 	}
@@ -218,8 +263,6 @@ func createRequestBunch(bunchNumber int) {
 		}
 	}
 }
-
-//var sem = make(chan int, 5)
 
 func main() {
 	requestTimes := map[int]map[int]time.Duration {}
