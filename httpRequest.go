@@ -12,6 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"strings"
+	"encoding/json"
+	"container/list"
 )
 
 // Global Variables
@@ -51,7 +53,7 @@ const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
 // for fixed tile requests
-const randomTileRequests = false
+const randomTileRequests = true
 var predefinedSlice = 0
 var predefinedX = 0
 var predefinedY = 0
@@ -89,12 +91,19 @@ func init() {
 }
 
 func setup() {
+	const prefix = "/image/v0/api/bbic?fname="
+	const metadata_suffix = "&mode=meta" // This returns json with the metadata
 
-	// value dictionary
+	metaDataURL := fmt.Sprintf("%s%s%s", prefix, imagePath, metadata_suffix)
+	getImageMetaData(metaDataURL)
+
+	// value dictionary level number,
 	requestParameterDictionary = map[int]map[string]int {
 		0:map[string] int{"stack":0, "slice":3699, "x":20, "y":20},
 		1:map[string] int{"stack":0, "slice":3700, "x":10, "y":10},
 		2:map[string] int{"stack":0, "slice":3694, "x":5,  "y":5} }
+
+
 
 	for outerMapKey := range requestParameterDictionary {
 		log.Debugf("Map for key %v: ", outerMapKey)
@@ -200,6 +209,74 @@ func imageReturned (bytesFromRequest []byte) (bool, string) {
 	} else {
 		return false, mimeType;
 	}
+}
+
+func getImageMetaData(urlString string) {
+	// All numbers in the metadata are zero based
+	// meaning: number of stacks = 3 allows to select stack 0,1,2
+	// Same is true for levels, slices, x and y values
+
+	u, err := url.Parse(urlString)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	u.Scheme = "http"
+	u.Host = hostname
+	q := u.Query()
+	//q.Set("q", "golang")
+	u.RawQuery = q.Encode()
+	log.Debugf("Tile request URL: %q", u.String())
+
+	res, err := http.Get(u.String())
+	log.Infof("Metadata URL: %s", u.String())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	//decoder := json.NewDecoder(res.Body)
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	metadataEntry := MetadataEntry{}
+	if error := json.Unmarshal(body, &metadataEntry); err != nil {
+		log.Error(error)
+	} else {
+		log.Infof("Results from metadata query unmarshaled attribute: %+v", metadataEntry)
+		log.Infof("Number of stacks: %d", len(metadataEntry.Stacks))
+		for stackNumber := range metadataEntry.Stacks {
+			log.Infof("Levels in stacks %d: %d", stackNumber, len(metadataEntry.Stacks[stackNumber].Levels))
+		}
+	}
+
+	// for each stack, multiple levels
+	numberOfStacks := 0
+	levelsInStacks := list.New()
+	for stackNumber := range metadataEntry.Stacks {
+		numberOfStacks++
+		listOfLevels := list.New()
+        	numberOfLevels := 0
+		for levelNumber := range metadataEntry.Stacks[stackNumber].Levels {
+			attrForLevel := LevelAttrs{
+				NumSlices : metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumSlices,
+				NumXTiles: metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumXTiles,
+				NumYTiles : metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumYTiles,
+			}
+			*listOfLevels = append(*listOfLevels, attrForLevel)
+			numberOfLevels++
+		}
+		*levelsInStacks = append(*levelsInStacks, listOfLevels)
+	}
+
+	tempStackNumber := 0
+	for e := levelsInStacks.Front(); e != nil; e = e.Next() {
+		log.Infof("Levels in stack %d: %d", tempStackNumber, e)
+		tempStackNumber++
+	}
+
 }
 
 func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Result {
