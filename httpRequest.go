@@ -313,6 +313,12 @@ func main() {
 			log.Info("=========\n")
 		}
 	}
+
+	if randomTileRequests {
+		log.Info("Random Tile Requests")
+	} else {
+		log.Info("Fixed Tile Requests")
+	}
 	log.Infof("Number of bunches: %v", numberOfBunches)
 	log.Infof("Number of requests/bunch: %v", bunchSize)
 	log.Infof("Average request time: %v", average)
