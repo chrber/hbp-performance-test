@@ -22,14 +22,20 @@ const (
 )
 const showRequests = false;
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
-const numberOfBunches = 10
+const numberOfBunches = 40
 const bunchSize int = 8
 
 // Check if correct image was returned
 const checkForCorrectImage = true
 
 // DESY dCache Endpoint config
+
+// F5 load balancer
 const hostname = "hbp-image.desy.de:8888"
+
+//A10 load balancer
+//const hostname = "131.169.4.31:8888"
+
 // old data
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 // new data
