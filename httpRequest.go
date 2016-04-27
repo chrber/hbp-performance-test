@@ -13,7 +13,6 @@ import (
 	"os"
 	"strings"
 	"encoding/json"
-	"container/list"
 )
 
 // Global Variables
@@ -22,9 +21,9 @@ const (
 	AverageTimeOverRequests = 2
 	DetailedTimesPerRequest = 3
 )
-const showRequests = false;
+const showRequests = true;
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
-const numberOfBunches = 40
+const numberOfBunches = 2
 const bunchSize int = 8
 
 // Check if correct image was returned
@@ -53,13 +52,13 @@ const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
 // for fixed tile requests
-const randomTileRequests = true
+const randomTileRequests = false
+var predefinedLevel = 0
 var predefinedSlice = 0
 var predefinedX = 0
 var predefinedY = 0
+var stacks []Stack
 
-var requestParameterDictionary map[int]map[string]int;
-const channelBuffer = numberOfBunches * bunchSize
 type Result struct {
 	bunchNumber int
 	requestNumber int
@@ -67,6 +66,7 @@ type Result struct {
 }
 
 // Channel used for returning Result struct of each bunch
+const channelBuffer = numberOfBunches * bunchSize
 var fromCreateRequestBunch = make(chan Result, channelBuffer)
 
 // image formats and magic numbers
@@ -95,56 +95,52 @@ func setup() {
 	const metadata_suffix = "&mode=meta" // This returns json with the metadata
 
 	metaDataURL := fmt.Sprintf("%s%s%s", prefix, imagePath, metadata_suffix)
-	getImageMetaData(metaDataURL)
+	stacks = getImageMetaData(metaDataURL)
 
-	// value dictionary level number,
-	requestParameterDictionary = map[int]map[string]int {
-		0:map[string] int{"stack":0, "slice":3699, "x":20, "y":20},
-		1:map[string] int{"stack":0, "slice":3700, "x":10, "y":10},
-		2:map[string] int{"stack":0, "slice":3694, "x":5,  "y":5} }
-
-
-
-	for outerMapKey := range requestParameterDictionary {
-		log.Debugf("Map for key %v: ", outerMapKey)
-		log.Debug("\n")
-		innerMap := requestParameterDictionary[outerMapKey]
-		for key := range innerMap{
-			log.Debugf("Key: %v Value: %s", key, strconv.Itoa(innerMap[key]))
+	for stackNum := range stacks {
+		log.Debugf("Levels in stack %d:", stackNum)
+		log.Debug("=========================================================")
+		for levelNum := range stacks[stackNum].Levels {
+			log.Debugf("Level number %d", levelNum)
+			log.Debugf("Level values: %+v", stacks[stackNum].Levels[levelNum].Attrs)
+			log.Debug("--------------------------------------------------------------")
 		}
-		log.Debug("=========\n")
+		log.Debugf("----End of stack: %d--------------------------", stackNum)
 	}
+
+	//requestParameterDictionary = map[int]map[string]int {
+	//	0:map[string] int{"stack":0, "slice":3699, "x":20, "y":20},
+	//	1:map[string] int{"stack":0, "slice":3700, "x":10, "y":10},
+	//	2:map[string] int{"stack":0, "slice":3694, "x":5,  "y":5} }
+
 }
 
-func createRandomValuesForLevel (level int) (stack, slice, x, y int) {
-	log.Debugf("Stack: %v", requestParameterDictionary[level]["stack"])
-	log.Debugf("Slice: %v", requestParameterDictionary[level]["slice"])
-	log.Debugf("x: %v", requestParameterDictionary[level]["x"])
-	log.Debugf("y: %v", requestParameterDictionary[level]["y"])
-	//stack = rand.Intn(requestParameterDictionary[level]["stack"])
-	stack = 0
-	slice = rand.Intn(requestParameterDictionary[level]["slice"])
-	x = rand.Intn(requestParameterDictionary[level]["x"])
-	y = rand.Intn(requestParameterDictionary[level]["y"])
+func createRandomValuesForLevel (stacks []Stack) (stack, level, slice, x, y int) {
+	stack = rand.Intn(len(stacks))
+	level = rand.Intn(len(stacks[stack].Levels))
+	slice = rand.Intn(stacks[stack].Attrs.NumSlices)
+	x = rand.Intn(stacks[stack].Levels[level].Attrs.NumXTiles)
+	y = rand.Intn(stacks[stack].Levels[level].Attrs.NumYTiles)
 	return
 }
 
-func createDeterministicValuesForLevel (level int) (stack, slice, x, y int) {
+func createDeterministicValuesForLevel (stacks []Stack) (stack, level, slice, x, y int) {
 	stack = 0
+	level = predefinedLevel;
 	slice = predefinedSlice;
 	x = predefinedX;
 	y = predefinedY;
-	if (predefinedSlice < requestParameterDictionary[level]["slice"]) {
+	if (predefinedSlice < stacks[stack].Attrs.NumSlices) {
 		predefinedSlice++
 	} else {
 		predefinedSlice = 0
 	}
-	if (predefinedX < requestParameterDictionary[level]["x"]) {
+	if (predefinedX < stacks[stack].Levels[level].Attrs.NumXTiles) {
 		predefinedX++
 	} else {
 		predefinedX = 0
 	}
-	if (predefinedY < requestParameterDictionary[level]["y"]) {
+	if (predefinedY < stacks[stack].Levels[level].Attrs.NumYTiles) {
 		predefinedY++
 	} else {
 		predefinedY = 0
@@ -157,12 +153,9 @@ func createRandTileRequest () (url string) {
 	suffix := "&mode=ims&prog="
 
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
-	log.Debugf("Random: %s",strconv.Itoa(rand.Intn(20)))
+	log.Debugf("Creating test random %d",rand.Intn(20))
 
-	level := rand.Intn(2)
-	log.Debugf("Level: %s",strconv.Itoa(level))
-
-	stack, slice, x, y := createRandomValuesForLevel(level)
+	stack, level, slice, x, y := createRandomValuesForLevel(stacks)
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
 	log.Debugf("TileString: %s", tileString)
@@ -178,7 +171,7 @@ func createSpecificTileRequest () (url string) {
 	level := 1
 	log.Debugf("Level: %s",strconv.Itoa(level))
 
-	stack, slice, x, y := createDeterministicValuesForLevel(level)
+	stack, level, slice, x, y := createDeterministicValuesForLevel(stacks)
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
 	log.Debugf("TileString: %s", tileString)
@@ -211,7 +204,7 @@ func imageReturned (bytesFromRequest []byte) (bool, string) {
 	}
 }
 
-func getImageMetaData(urlString string) {
+func getImageMetaData(urlString string) []Stack {
 	// All numbers in the metadata are zero based
 	// meaning: number of stacks = 3 allows to select stack 0,1,2
 	// Same is true for levels, slices, x and y values
@@ -230,7 +223,7 @@ func getImageMetaData(urlString string) {
 	log.Debugf("Tile request URL: %q", u.String())
 
 	res, err := http.Get(u.String())
-	log.Infof("Metadata URL: %s", u.String())
+	log.Debugf("Metadata URL: %s", u.String())
 
 	if err != nil {
 		log.Fatal(err)
@@ -245,38 +238,34 @@ func getImageMetaData(urlString string) {
 	if error := json.Unmarshal(body, &metadataEntry); err != nil {
 		log.Error(error)
 	} else {
-		log.Infof("Results from metadata query unmarshaled attribute: %+v", metadataEntry)
-		log.Infof("Number of stacks: %d", len(metadataEntry.Stacks))
+		log.Debugf("Results from metadata query unmarshaled attribute: %+v", metadataEntry)
+		log.Debugf("Number of stacks: %d", len(metadataEntry.Stacks))
 		for stackNumber := range metadataEntry.Stacks {
-			log.Infof("Levels in stacks %d: %d", stackNumber, len(metadataEntry.Stacks[stackNumber].Levels))
+			log.Debugf("Levels in stacks %d: %d", stackNumber, len(metadataEntry.Stacks[stackNumber].Levels))
 		}
 	}
 
 	// for each stack, multiple levels
 	numberOfStacks := 0
-	levelsInStacks := list.New()
+	stacks := []Stack{}
 	for stackNumber := range metadataEntry.Stacks {
 		numberOfStacks++
-		listOfLevels := list.New()
+		levels := []Level{}
         	numberOfLevels := 0
 		for levelNumber := range metadataEntry.Stacks[stackNumber].Levels {
-			attrForLevel := LevelAttrs{
+			attrForLevel := Level{ LevelAttrs{
 				NumSlices : metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumSlices,
 				NumXTiles: metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumXTiles,
 				NumYTiles : metadataEntry.Stacks[stackNumber].Levels[levelNumber].Attrs.NumYTiles,
-			}
-			*listOfLevels = append(*listOfLevels, attrForLevel)
+			}}
+			levels = append(levels, attrForLevel)
 			numberOfLevels++
 		}
-		*levelsInStacks = append(*levelsInStacks, listOfLevels)
+		stackAttrs := metadataEntry.Stacks[stackNumber].Attrs
+		stackWithLevels := Stack{levels, stackAttrs}
+		stacks = append(stacks, stackWithLevels)
 	}
-
-	tempStackNumber := 0
-	for e := levelsInStacks.Front(); e != nil; e = e.Next() {
-		log.Infof("Levels in stack %d: %d", tempStackNumber, e)
-		tempStackNumber++
-	}
-
+	return stacks
 }
 
 func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Result {
@@ -298,9 +287,6 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 	resp, err := http.Get(u.String())
 	endTime := time.Since(startTime)
 
-	// request time write into globally visible array
-	//requestTimes[bunchNumber][requestNumber] = endTime
-
 	defer resp.Body.Close()
 	log.Debug("Time for request:"+endTime.String())
 
@@ -310,8 +296,8 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode == 200 {
 		// OK
-		log.Debug("#######################################")
-		log.Debugf("Request number %d: %s\n", requestNumber, string(bodyBytes))
+		//log.Debug("#######################################")
+		//log.Debugf("Request number %d: %s\n", requestNumber, string(bodyBytes))
 		if (checkForCorrectImage) {
 			didReturnImage, imageType := imageReturned(bodyBytes)
 			if (didReturnImage) {
