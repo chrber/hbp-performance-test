@@ -21,9 +21,9 @@ const (
 	AverageTimeOverRequests = 2
 	DetailedTimesPerRequest = 3
 )
-const showRequests = true;
+const showRequests = true
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
-const numberOfBunches = 2
+const numberOfBunches = 10
 const bunchSize int = 8
 
 // Check if correct image was returned
@@ -39,8 +39,13 @@ const hostname = "hbp-image.desy.de:8888"
 
 // old data
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
+
 // new data
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
+//const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/sections/whs.h5"
+
+//NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
+//MetaData get not working : const imagePath = "/srv/data/HBP/stacks/rat/r602/anno/r602_anno.h5"
 
 //OneData Endpoint config
 //  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
@@ -53,6 +58,7 @@ const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 
 // for fixed tile requests
 const randomTileRequests = false
+var predefinedStack = 0
 var predefinedLevel = 0
 var predefinedSlice = 0
 var predefinedX = 0
@@ -115,7 +121,7 @@ func setup() {
 
 }
 
-func createRandomValuesForLevel (stacks []Stack) (stack, level, slice, x, y int) {
+func createRandomValuesForLevel () (stack, level, slice, x, y int) {
 	stack = rand.Intn(len(stacks))
 	level = rand.Intn(len(stacks[stack].Levels))
 	slice = rand.Intn(stacks[stack].Attrs.NumSlices)
@@ -124,29 +130,69 @@ func createRandomValuesForLevel (stacks []Stack) (stack, level, slice, x, y int)
 	return
 }
 
-func createDeterministicValuesForLevel (stacks []Stack) (stack, level, slice, x, y int) {
-	stack = 0
-	level = predefinedLevel;
-	slice = predefinedSlice;
-	x = predefinedX;
-	y = predefinedY;
-	if (predefinedSlice < stacks[stack].Attrs.NumSlices) {
+func createDeterministicValuesForLevel () (stack, level, slice, x, y int) {
+
+	stack = predefinedStack
+	level = predefinedLevel
+	slice = predefinedSlice
+	x = predefinedX
+	y = predefinedY
+
+	if (predefinedStack < len(stacks)-1) {
+		predefinedStack++
+	} else {
+		//log.Infof("Reseting stack number: %d", predefinedStack)
+		predefinedStack = 0
+	}
+
+	if (predefinedSlice < stacks[predefinedStack].Attrs.NumSlices) {
 		predefinedSlice++
 	} else {
 		predefinedSlice = 0
 	}
-	if (predefinedX < stacks[stack].Levels[level].Attrs.NumXTiles) {
+
+	if (predefinedX < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumXTiles-1) {
 		predefinedX++
 	} else {
 		predefinedX = 0
 	}
-	if (predefinedY < stacks[stack].Levels[level].Attrs.NumYTiles) {
+
+	if (predefinedY < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumYTiles-1) {
 		predefinedY++
 	} else {
 		predefinedY = 0
 	}
 	return
 }
+
+//func createDeterministicValuesForLevel () (predefinedStack, predefinedLevel, predefinedSlice, predefinedX, predefinedY int) {
+//
+//	if (predefinedStack < len(stacks)-1) {
+//		predefinedStack++
+//	} else {
+//		log.Infof("Reseting stack number: %d", predefinedStack)
+//		predefinedStack = 0
+//	}
+//
+//	if (predefinedSlice < stacks[predefinedStack].Attrs.NumSlices) {
+//		predefinedSlice++
+//	} else {
+//		predefinedSlice = 0
+//	}
+//
+//	if (predefinedX < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumXTiles) {
+//		predefinedX++
+//	} else {
+//		predefinedX = 0
+//	}
+//
+//	if (predefinedY < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumYTiles) {
+//		predefinedY++
+//	} else {
+//		predefinedY = 0
+//	}
+//	return
+//}
 
 func createRandTileRequest () (url string) {
 	prefix := "/image/v0/api/bbic?fname="
@@ -155,7 +201,7 @@ func createRandTileRequest () (url string) {
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	log.Debugf("Creating test random %d",rand.Intn(20))
 
-	stack, level, slice, x, y := createRandomValuesForLevel(stacks)
+	stack, level, slice, x, y := createRandomValuesForLevel()
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
 	log.Debugf("TileString: %s", tileString)
@@ -171,7 +217,7 @@ func createSpecificTileRequest () (url string) {
 	level := 1
 	log.Debugf("Level: %s",strconv.Itoa(level))
 
-	stack, level, slice, x, y := createDeterministicValuesForLevel(stacks)
+	stack, level, slice, x, y := createDeterministicValuesForLevel()
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
 	log.Debugf("TileString: %s", tileString)
@@ -223,7 +269,7 @@ func getImageMetaData(urlString string) []Stack {
 	log.Debugf("Tile request URL: %q", u.String())
 
 	res, err := http.Get(u.String())
-	log.Debugf("Metadata URL: %s", u.String())
+	log.Infof("Metadata URL: %s", u.String())
 
 	if err != nil {
 		log.Fatal(err)
@@ -234,9 +280,13 @@ func getImageMetaData(urlString string) []Stack {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
+	//n := bytes.IndexByte(body, 0)
+	//s := string(body[:n])
+	//log.Infof("String returned: %s", s)
+
 	metadataEntry := MetadataEntry{}
 	if error := json.Unmarshal(body, &metadataEntry); err != nil {
-		log.Error(error)
+		log.Errorf("Metadata for requested image did not return JSON: %s",error)
 	} else {
 		log.Debugf("Results from metadata query unmarshaled attribute: %+v", metadataEntry)
 		log.Debugf("Number of stacks: %d", len(metadataEntry.Stacks))
@@ -306,15 +356,19 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 				log.Errorf("No image returned for Bunch: %d Request: %d URLsuffix: %s", bunchNumber, requestNumber, urlSuffix)
 			}
 		}
+		return  Result{bunchNumber, requestNumber, endTime}
+	} else if resp.StatusCode == 500 {
+		log.Errorf("Server-side error (500) for URL: %s.", u.String())
+		return Result{}
 	} else {
-		log.Errorf("Response status code: %i. The error was: %v", resp.StatusCode, err)
+		log.Errorf("Unknown Error with response code: %s and error %s", resp.StatusCode, err)
+		return Result{}
 	}
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return  Result{bunchNumber, requestNumber, endTime}
+	return Result{}
 }
 
 func createRequestBunch(bunchNumber int) {
@@ -325,11 +379,7 @@ func createRequestBunch(bunchNumber int) {
 		} else {
 			result = fireTileRequest(bunchNumber, requestNumber, createSpecificTileRequest())
 		}
-		if (result != Result{}) {
-			fromCreateRequestBunch <-result
-		} else {
-			log.Errorf("Empty result returned for bunch %d.", bunchNumber)
-		}
+		fromCreateRequestBunch <-result
 	}
 }
 
@@ -347,11 +397,18 @@ func main() {
 		}(bunchNumber)
 	}
 
+	requestErrorCount := 0
+
 	for bunchNumber:=0; bunchNumber<numberOfBunches; bunchNumber++ {
+
 		for requestNumber:=0; requestNumber<bunchSize; requestNumber++ {
 			result := <-fromCreateRequestBunch
 			log.Debugf("Result for bunch %v, request %v: %v", result.bunchNumber, result.requestNumber, result.requestTime)
-			requestTimes[result.bunchNumber][result.requestNumber] = result.requestTime
+			if (result != Result{}) {
+				requestTimes[result.bunchNumber][result.requestNumber] = result.requestTime
+			} else {
+				requestErrorCount++
+			}
 		}
 	}
 
@@ -390,5 +447,6 @@ func main() {
 	}
 	log.Infof("Number of bunches: %v", numberOfBunches)
 	log.Infof("Number of requests/bunch: %v", bunchSize)
+	log.Infof("Requests/Errors: %d/%d", numberOfBunches*bunchSize, requestErrorCount)
 	log.Infof("Average request time: %v", average)
 }
