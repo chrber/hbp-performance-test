@@ -5,7 +5,7 @@ Setup
 
 1. Install golang from here: https://golang.org/dl/
 2. Configure the script to your needs: see Config
-3. go run httpRequest.go (runs the script on command line)
+3. go run httpRequest.go MetaData.go (runs the script on command line)
  
 Config
 ---------------
