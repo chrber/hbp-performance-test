@@ -10,16 +10,18 @@ Setup
 Config
 ---------------
 
-You should set the hostname at the very least, including the port if not standard http. Then set the number ob parallel bunches. The bunch size is currently 8, but can also be set.
+You should set the hostname at the very least, including the port if not standard http. Then set the number of parallel bunches. The bunch size is currently 8, but can also be set.
 
     const numberOfBunches = 10
     const bunchSize int = 8
 
 The image path is currently set as follows:
 
-    const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
+    const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
-The script currently does not allow to use multiple images as the metadata is not yet read automatically. The requestParameterDictionary is currently statically defined and just to be used with the standard image "/srv/data/HBP/BigBrain_jpeg.h5". If other images' performance shall be measured one has to adopt the requestParameterDictionary accordingly or read json through the metadata URL and pack the returned json into the requestParameterDictionary. This is work for the future if needed.
+Metdata for the images is queried automatically. One word of caution, getting metadata for some images it did not work, e.g. const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
+
+There are several ways to increase the performance related output (const reportDetail = AverageTimeOverBunches) and have debugging enabled (init function).
 
 Scaling
 ---------------
