@@ -15,16 +15,26 @@ import (
 	"encoding/json"
 )
 
+// Specify number of bunches and requests per bunch
+const numberOfBunches = 10
+const bunchSize int = 8
+
+
 // Global Variables
 const (
 	AverageTimeOverBunches = 1
 	AverageTimeOverRequests = 2
 	DetailedTimesPerRequest = 3
 )
-const showRequests = true
+
+// for fixed or random tile requests
+const randomTileRequests = true
+
+// logging tile request URLs
+const showRequests = false
+
+// define level of detail in logging request times
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
-const numberOfBunches = 10
-const bunchSize int = 8
 
 // Check if correct image was returned
 const checkForCorrectImage = true
@@ -37,7 +47,7 @@ const hostname = "hbp-image.desy.de:8888"
 //A10 load balancer
 //const hostname = "131.169.4.31:8888"
 
-// old data
+// old Image data
 const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 
 // new data
@@ -56,8 +66,6 @@ const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 //new data
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
-// for fixed tile requests
-const randomTileRequests = false
 var predefinedStack = 0
 var predefinedLevel = 0
 var predefinedSlice = 0
