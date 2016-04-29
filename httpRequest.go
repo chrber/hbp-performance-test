@@ -48,10 +48,10 @@ const hostname = "hbp-image.desy.de:8888"
 //const hostname = "131.169.4.31:8888"
 
 // old Image data
-const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
+//const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 
 // new data
-//const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
+const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 //const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/sections/whs.h5"
 
 //NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
