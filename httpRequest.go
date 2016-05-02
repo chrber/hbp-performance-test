@@ -28,10 +28,10 @@ const (
 )
 
 // for fixed or random tile requests
-const randomTileRequests = true
+const randomTileRequests = false
 
 // logging tile request URLs
-const showRequests = false
+const showRequests = true
 
 // define level of detail in logging request times
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
@@ -66,6 +66,7 @@ const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.
 //new data
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
+var mutex = make(chan int, 1)
 var predefinedStack = 0
 var predefinedLevel = 0
 var predefinedSlice = 0
@@ -140,6 +141,8 @@ func createRandomValuesForLevel () (stack, level, slice, x, y int) {
 
 func createDeterministicValuesForLevel () (stack, level, slice, x, y int) {
 
+	mutex <- 1
+	log.Info("I am in")
 	stack = predefinedStack
 	level = predefinedLevel
 	slice = predefinedSlice
@@ -170,6 +173,8 @@ func createDeterministicValuesForLevel () (stack, level, slice, x, y int) {
 	} else {
 		predefinedY = 0
 	}
+	<- mutex
+	log.Info("I am out")
 	return
 }
 
