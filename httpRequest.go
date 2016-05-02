@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"encoding/json"
+	"sync"
 )
 
 // Specify number of bunches and requests per bunch
@@ -31,7 +32,7 @@ const (
 const randomTileRequests = false
 
 // logging tile request URLs
-const showRequests = true
+const showRequests = false
 
 // define level of detail in logging request times
 const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunches |  AverageTimeOverRequests |  DetailedTimesPerRequest
@@ -66,7 +67,7 @@ const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.
 //new data
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
-var mutex = make(chan int, 1)
+var mutex = &sync.Mutex{}
 var predefinedStack = 0
 var predefinedLevel = 0
 var predefinedSlice = 0
@@ -141,8 +142,8 @@ func createRandomValuesForLevel () (stack, level, slice, x, y int) {
 
 func createDeterministicValuesForLevel () (stack, level, slice, x, y int) {
 
-	mutex <- 1
-	log.Info("I am in")
+	mutex.Lock()
+	log.Debug("I am in")
 	stack = predefinedStack
 	level = predefinedLevel
 	slice = predefinedSlice
@@ -173,39 +174,8 @@ func createDeterministicValuesForLevel () (stack, level, slice, x, y int) {
 	} else {
 		predefinedY = 0
 	}
-	<- mutex
-	log.Info("I am out")
 	return
 }
-
-//func createDeterministicValuesForLevel () (predefinedStack, predefinedLevel, predefinedSlice, predefinedX, predefinedY int) {
-//
-//	if (predefinedStack < len(stacks)-1) {
-//		predefinedStack++
-//	} else {
-//		log.Infof("Reseting stack number: %d", predefinedStack)
-//		predefinedStack = 0
-//	}
-//
-//	if (predefinedSlice < stacks[predefinedStack].Attrs.NumSlices) {
-//		predefinedSlice++
-//	} else {
-//		predefinedSlice = 0
-//	}
-//
-//	if (predefinedX < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumXTiles) {
-//		predefinedX++
-//	} else {
-//		predefinedX = 0
-//	}
-//
-//	if (predefinedY < stacks[predefinedStack].Levels[predefinedLevel].Attrs.NumYTiles) {
-//		predefinedY++
-//	} else {
-//		predefinedY = 0
-//	}
-//	return
-//}
 
 func createRandTileRequest () (url string) {
 	prefix := "/image/v0/api/bbic?fname="
@@ -233,7 +203,8 @@ func createSpecificTileRequest () (url string) {
 	stack, level, slice, x, y := createDeterministicValuesForLevel()
 	tileString := "TILE+0+%d+%d+%d+%d+%d+none+10+1"
 	tileString = fmt.Sprintf(tileString, stack, level, slice, x, y)
-	log.Debugf("TileString: %s", tileString)
+	mutex.Unlock()
+	log.Debugf("Mutex: I am out: %s", tileString)
 	url = fmt.Sprintf("%s%s%s%s", prefix, imagePath, suffix, tileString)
 	log.Debugf("URL: %v", url)
 	return url
