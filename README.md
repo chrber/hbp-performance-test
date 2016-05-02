@@ -19,7 +19,11 @@ The image path is currently set as follows:
 
     const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
 
-Metdata for the images is queried automatically. One word of caution, getting metadata for some images it did not work, e.g. const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
+Currently the default is set to create static tile requests, which will create the very same tile requests for every single performance test run. There is also a random tile request mode, which can be switched on by
+
+    const randomTileRequests = true
+
+Metdata for the images is queried automatically. One word of caution: Getting metadata for some images did not work, e.g. const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5". Please feel free to further investigate.
 
 There are several ways to increase the performance related output (const reportDetail = AverageTimeOverBunches) and have debugging enabled (init function).
 
