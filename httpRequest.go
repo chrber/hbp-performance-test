@@ -40,32 +40,39 @@ const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunc
 // Check if correct image was returned
 const checkForCorrectImage = true
 
+// ================================
 // DESY dCache Endpoint config
 
 // F5 load balancer
-const hostname = "hbp-image.desy.de:8888"
+//const hostname = "http://hbp-image.desy.de:8888"
 
 //A10 load balancer
-//const hostname = "131.169.4.31:8888"
+//const hostname = "http://131.169.4.31:8888"
 
-// old Image data
-//const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
-
-// new data
-const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
-//const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/sections/whs.h5"
-
-//NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
-//MetaData get not working : const imagePath = "/srv/data/HBP/stacks/rat/r602/anno/r602_anno.h5"
-
-//OneData Endpoint config
+// ================================
+// OneData Endpoint config
 //  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
 
-//const hostname = "149.156.9.143:8888"
-//old data
-//const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
-//new data
+//const hostname = "http://149.156.9.143:8888"
+
+// ================================
+// FZJ Endpoint config
+const hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
+
+// ================================
+// The data (paths are aligned at all three sites
+
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.h5"
+//const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/sections/whs.h5"
+//const imagePath = "/srv/data/HBP/stacks/rat/r602/sections/r602.h5"
+//const imagePath = "/srv/data/HBP/template/human/jubrain/sections/colin27.h5"
+//const imagePath = "/srv/data/HBP/template/mouse/allen_v3/sections/allen.h5"
+//const imagePath = "/srv/data/HBP/template/human/bigbrain_100um/sections/bigbrain_100um.h5"
+const imagePath = "/srv/data/HBP/stacks/rat/golgi/sections/golgi_rat_sections.h5"
+
+//DOES NOT WORK //const imagePath = "/srv/data/HBP/template/human/infant/anno/infant_anno.h5"
+//NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
+//MetaData get not working : const imagePath = "/srv/data/HBP/stacks/rat/r602/anno/r602_anno.h5"
 
 var mutex = &sync.Mutex{}
 var predefinedStack = 0
@@ -239,14 +246,12 @@ func getImageMetaData(urlString string) []Stack {
 	// meaning: number of stacks = 3 allows to select stack 0,1,2
 	// Same is true for levels, slices, x and y values
 
-	u, err := url.Parse(urlString)
+	u, err := url.Parse(hostname + urlString)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	u.Scheme = "http"
-	u.Host = hostname
 	q := u.Query()
 	//q.Set("q", "golang")
 	u.RawQuery = q.Encode()
@@ -303,12 +308,10 @@ func getImageMetaData(urlString string) []Stack {
 }
 
 func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Result {
-	u, err := url.Parse(urlSuffix)
+	u, err := url.Parse(hostname + urlSuffix)
 	if err != nil {
 		log.Fatal(err)
 	}
-	u.Scheme = "http"
-	u.Host = hostname
 	q := u.Query()
 	//q.Set("q", "golang")
 	u.RawQuery = q.Encode()
