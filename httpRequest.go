@@ -41,25 +41,22 @@ const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunc
 const checkForCorrectImage = true
 
 // Specify the protocol to be used
-const protocol = "https"
+var protocol = "https"
 
+// ================================
+// FZJ Endpoint config
+var hostname = "fsd-cloud47.zam.kfa-juelich.de"
+//var hostname = "hbp-image.desy.de:8888"
 // DESY dCache Endpoint config
-// F5 load balancer
-//const hostname = "hbp-image.desy.de:8888"
-//A10 load balancer
-//const hostname = "131.169.4.31:8888"
-
-// Xen CoreOS machine
-//const hostname = "coreos01.desy.de:80"
-//const hostname = "hbp-image-service.desy.de"
-
-//Juelich Endpoint
-//
-const hostname = "fsd-cloud47.zam.kfa-juelich.de"
+// --- Production
+//var hostname = "hbp-image-service.desy.de"
+// --- F5 load balancer
+//var hostname = "hbp-image.desy.de:8888"
+// --- A10 load balancer
+//var hostname = "131.169.4.31:8888"
 
 //OneData Endpoint config
-//  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
-//const hostname = "149.156.9.143:8888"
+//var hostname = "149.156.9.143:8888"
 
 // old Image data
 //const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
@@ -377,6 +374,10 @@ func createRequestBunch(bunchNumber int) {
 }
 
 func main() {
+	if(len(os.Args) > 1) {
+		protocol = os.Args[1]
+		hostname = os.Args[2]
+	}
 	requestTimes := map[int]map[int]time.Duration {}
 	log.Debugf("RequestTimes length: %v", len(requestTimes))
 
