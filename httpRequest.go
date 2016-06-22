@@ -29,7 +29,7 @@ const (
 )
 
 // for fixed or random tile requests
-const randomTileRequests = false
+const randomTileRequests = true
 
 // logging tile request URLs
 const showRequests = false
@@ -57,7 +57,7 @@ const checkForCorrectImage = true
 
 // ================================
 // FZJ Endpoint config
-const hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
+var hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
 
 // ================================
 // The data (paths are aligned at all three sites
@@ -110,7 +110,7 @@ func init() {
 	// Only log the warning severity or above.
 	log.SetLevel(log.InfoLevel)
 	//log.SetLevel(log.ErrorLevel)
-	//log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 }
 
 func setup() {
@@ -371,6 +371,9 @@ func createRequestBunch(bunchNumber int) {
 }
 
 func main() {
+	if(len(os.Args) > 1) {
+		hostname = os.Args[1]
+	}
 	requestTimes := map[int]map[int]time.Duration {}
 	log.Debugf("RequestTimes length: %v", len(requestTimes))
 
