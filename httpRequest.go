@@ -40,7 +40,9 @@ const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunc
 // Check if correct image was returned
 const checkForCorrectImage = true
 
-const protocol = "http"
+// Specify the protocol to be used
+const protocol = "https"
+
 // DESY dCache Endpoint config
 // F5 load balancer
 //const hostname = "hbp-image.desy.de:8888"
@@ -53,7 +55,7 @@ const protocol = "http"
 
 //Juelich Endpoint
 //
-//const hostname = "fsd-cloud47.zam.kfa-juelich.de"
+const hostname = "fsd-cloud47.zam.kfa-juelich.de"
 
 //OneData Endpoint config
 //  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
