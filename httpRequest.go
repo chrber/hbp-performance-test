@@ -17,7 +17,7 @@ import (
 )
 
 // Specify number of bunches and requests per bunch
-const numberOfBunches = 10
+const numberOfBunches = 40
 const bunchSize int = 8
 
 
@@ -29,7 +29,7 @@ const (
 )
 
 // for fixed or random tile requests
-const randomTileRequests = false
+const randomTileRequests = true
 
 // logging tile request URLs
 const showRequests = false
@@ -40,13 +40,24 @@ const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunc
 // Check if correct image was returned
 const checkForCorrectImage = true
 
+const protocol = "http"
 // DESY dCache Endpoint config
-
 // F5 load balancer
-const hostname = "hbp-image.desy.de:8888"
-
+//const hostname = "hbp-image.desy.de:8888"
 //A10 load balancer
 //const hostname = "131.169.4.31:8888"
+
+// Xen CoreOS machine
+//const hostname = "coreos01.desy.de:80"
+//const hostname = "hbp-image-service.desy.de"
+
+//Juelich Endpoint
+//
+//const hostname = "fsd-cloud47.zam.kfa-juelich.de"
+
+//OneData Endpoint config
+//  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
+//const hostname = "149.156.9.143:8888"
 
 // old Image data
 //const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
@@ -58,10 +69,6 @@ const imagePath = "/srv/data/HBP/template/human/bigbrain_20um/sections/bigbrain.
 //NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
 //MetaData get not working : const imagePath = "/srv/data/HBP/stacks/rat/r602/anno/r602_anno.h5"
 
-//OneData Endpoint config
-//  149.156.9.143:8888/image/v0/api/bbic?fname=/srv/data
-
-//const hostname = "149.156.9.143:8888"
 //old data
 //const imagePath = "/srv/data/HBP/BigBrain_jpeg.h5"
 //new data
@@ -245,7 +252,7 @@ func getImageMetaData(urlString string) []Stack {
 		log.Fatal(err)
 	}
 
-	u.Scheme = "http"
+	u.Scheme = protocol
 	u.Host = hostname
 	q := u.Query()
 	//q.Set("q", "golang")
