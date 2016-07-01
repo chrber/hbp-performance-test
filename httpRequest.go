@@ -41,7 +41,7 @@ const reportDetail = AverageTimeOverBunches // Values can be AverageTimeOverBunc
 const checkForCorrectImage = true
 
 // Specify the protocol to be used
-var protocol = "https"
+var protocol = "http"
 
 // ================================
 // FZJ Endpoint config
@@ -107,9 +107,9 @@ func init() {
 	log.SetOutput(os.Stderr)
 
 	// Only log the warning severity or above.
-	log.SetLevel(log.InfoLevel)
+	//log.SetLevel(log.InfoLevel)
 	//log.SetLevel(log.ErrorLevel)
-	//log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 }
 
 func setup() {
@@ -313,7 +313,7 @@ func fireTileRequest(bunchNumber int, requestNumber int, urlSuffix string) Resul
 	if err != nil {
 		log.Fatal(err)
 	}
-	u.Scheme = "http"
+	u.Scheme = protocol
 	u.Host = hostname
 	q := u.Query()
 	//q.Set("q", "golang")
