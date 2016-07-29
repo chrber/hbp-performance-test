@@ -17,7 +17,7 @@ import (
 )
 
 // Specify number of bunches and requests per bunch
-const numberOfBunches = 10
+const numberOfBunches = 100
 const bunchSize int = 8
 
 
@@ -43,11 +43,14 @@ const checkForCorrectImage = true
 // ================================
 // DESY dCache Endpoint config
 
+// nginx
+var hostname = "http://hbp-image-service.desy.de"
+
 // F5 load balancer
-//const hostname = "http://hbp-image.desy.de:8888"
+//var hostname = "http://hbp-image.desy.de:8888"
 
 //A10 load balancer
-//const hostname = "http://131.169.4.31:8888"
+//var hostname = "http://131.169.4.31:8888"
 
 // ================================
 // OneData Endpoint config
@@ -57,7 +60,7 @@ const checkForCorrectImage = true
 
 // ================================
 // FZJ Endpoint config
-var hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
+//var hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
 
 // ================================
 // The data (paths are aligned at all three sites
@@ -69,6 +72,7 @@ var hostname = "https://fsd-cloud47.zam.kfa-juelich.de:443"
 //const imagePath = "/srv/data/HBP/template/mouse/allen_v3/sections/allen.h5"
 //const imagePath = "/srv/data/HBP/template/human/bigbrain_100um/sections/bigbrain_100um.h5"
 const imagePath = "/srv/data/HBP/stacks/rat/golgi/sections/golgi_rat_sections.h5"
+//const imagePath = "/srv/data/HBP/stacks/rat/golgi/anno/golgi_anno_sagittal_v1.h5"
 
 //DOES NOT WORK //const imagePath = "/srv/data/HBP/template/human/infant/anno/infant_anno.h5"
 //NOT WORKING const imagePath = "/srv/data/HBP/template/rat/waxholm/v2/anno/whs_axial_v2.h5"
@@ -110,7 +114,7 @@ func init() {
 	// Only log the warning severity or above.
 	log.SetLevel(log.InfoLevel)
 	//log.SetLevel(log.ErrorLevel)
-	log.SetLevel(log.DebugLevel)
+	//log.SetLevel(log.DebugLevel)
 }
 
 func setup() {
